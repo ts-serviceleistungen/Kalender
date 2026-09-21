@@ -18,7 +18,26 @@ function eventHtml(e){const s=new Date(e.start_time);const en=new Date(e.end_tim
 function renderMonth(){let [a,b]=rangeFor(), html=`<div class="monthgrid">`;["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(x=>html+=`<div class="dow">${x}</div>`);for(let d=new Date(a);d<b;d.setDate(d.getDate()+1)){const day=new Date(d), next=new Date(day);next.setDate(next.getDate()+1);html+=`<div class="day"><div class="daynum">${day.getDate()}</div>`;events.filter(e=>new Date(e.start_time)<next&&new Date(e.end_time)>day).forEach(e=>html+=eventHtml(e));html+="</div>"}html+="</div>";$("calendar").innerHTML=html;bindEvents()}
 function renderTimeView(){let a=mode==="day"?new Date(current):startOfWeek(current);let days=mode==="day"?1:7;let html='<div class="week">';for(let h=0;h<24;h++){html+=`<div class="timeRow"><div class="time">${pad(h)}:00</div><div class="slot">`;for(let i=0;i<days;i++){let d=new Date(a);d.setDate(d.getDate()+i);let s=new Date(d);s.setHours(h,0,0,0);let en=new Date(s);en.setHours(h+1);events.filter(e=>new Date(e.start_time)<en&&new Date(e.end_time)>s).forEach(e=>html+=eventHtml(e))}html+='</div></div>'}html+='</div>';$("calendar").innerHTML=html;bindEvents()}
 function bindEvents(){document.querySelectorAll(".event").forEach(x=>x.onclick=()=>openEdit(x.dataset.id))}
-function openNew(){editingId=null;$("modalTitle").textContent="Termin hinzufügen";$("title").value="";$("type").value="24-Stunden-Schicht";let s=new Date(current);s.setHours(new Date().getHours()+1,0,0,0);let e=new Date(s);e.setHours(e.getHours()+2);$("start").value=localInput(s);$("end").value=localInput(e);$("notes").value="";$("block").checked=true;$("delete").hidden=true;$("formMsg").textContent="";$("modal").hidden=false}
+function openNew(){editingId=null;$("modalTitle").textContent="Termin hinzufügen";$("title").value="";$("type").value="24-Stunden-Schicht";let s=new Date(current);s.setHours(6,0,0,0);let e=new Date(s);e.setDate(e.getDate()+1);e.setHours(6,30,0,0);$("start").value=localInput(s);$("end").value=localInput(e);$("notes").value="";$("block").checked=true;$("delete").hidden=true;$("formMsg").textContent="";$("modal").hidden=false}
+function setShiftTimes(){
+  const startValue = $("start").value;
+  if(!startValue) return;
+  const start = fromInput(startValue);
+  if(isNaN(start)) return;
+  start.setHours(6,0,0,0);
+  const end = new Date(start);
+  end.setDate(end.getDate()+1);
+  end.setHours(6,30,0,0);
+  $("start").value = localInput(start);
+  $("end").value = localInput(end);
+}
+
+$("type").addEventListener("change",()=>{
+  if($("type").value==="24-Stunden-Schicht"){
+    setShiftTimes();
+  }
+});
+
 function openEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editingId=id;$("modalTitle").textContent="Termin bearbeiten";$("title").value=e.title;$("type").value=e.event_type;$("start").value=localInput(new Date(e.start_time));$("end").value=localInput(new Date(e.end_time));$("notes").value=e.notes||"";$("block").checked=e.blocks_customer_bookings;$("delete").hidden=false;$("formMsg").textContent="";$("modal").hidden=false}
 async function save(){
   const title=$("title").value.trim(), s=fromInput($("start").value), e=fromInput($("end").value);
