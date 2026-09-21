@@ -20,13 +20,65 @@ function renderTimeView(){let a=mode==="day"?new Date(current):startOfWeek(curre
 function bindEvents(){document.querySelectorAll(".event").forEach(x=>x.onclick=()=>openEdit(x.dataset.id))}
 function openNew(){editingId=null;$("modalTitle").textContent="Termin hinzufügen";$("title").value="";$("type").value="24-Stunden-Schicht";let s=new Date(current);s.setHours(new Date().getHours()+1,0,0,0);let e=new Date(s);e.setHours(e.getHours()+2);$("start").value=localInput(s);$("end").value=localInput(e);$("notes").value="";$("block").checked=true;$("delete").hidden=true;$("formMsg").textContent="";$("modal").hidden=false}
 function openEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editingId=id;$("modalTitle").textContent="Termin bearbeiten";$("title").value=e.title;$("type").value=e.event_type;$("start").value=localInput(new Date(e.start_time));$("end").value=localInput(new Date(e.end_time));$("notes").value=e.notes||"";$("block").checked=e.blocks_customer_bookings;$("delete").hidden=false;$("formMsg").textContent="";$("modal").hidden=false}
-async function save(){const title=$("title").value.trim(),s=fromInput($("start").value),e=fromInput($("end").value);if(!title||isNaN(s)||isNaN(e)||e<=s){$("formMsg").textContent="Bitte Titel sowie gültigen Beginn und Ende eingeben.";return}const payload={title,event_type:$("type").value,start_time:s.toISOString(),end_time:e.toISOString(),notes:$("notes").value.trim()||null,blocks_customer_bookings:$("block").checked};$("formMsg").textContent="Speichere…";let r=editingId?await db.from("personal_calendar_events").update(payload).eq("id",editingId):await db.from("personal_calendar_events").insert(payload);if(r.error){$("formMsg").textContent=r.error.message;return}$("modal").hidden=true;await load()}
+async function save(){
+  const title=$("title").value.trim(), s=fromInput($("start").value), e=fromInput($("end").value);
+  if(!title||isNaN(s)||isNaN(e)||e<=s){
+    $("formMsg").textContent="Bitte Titel sowie gültigen Beginn und Ende eingeben.";
+    return;
+  }
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){
+    $("formMsg").textContent="Deine Anmeldung ist abgelaufen. Bitte erneut anmelden.";
+    setTimeout(()=>location.reload(),1200);
+    return;
+  }
+  const payload={
+    title,
+    event_type:$("type").value,
+    start_time:s.toISOString(),
+    end_time:e.toISOString(),
+    notes:$("notes").value.trim()||null,
+    blocks_customer_bookings:$("block").checked
+  };
+  $("formMsg").textContent="Speichere…";
+  const operation=editingId
+    ? db.from("personal_calendar_events").update(payload).eq("id",editingId)
+    : db.from("personal_calendar_events").insert(payload);
+  const timeout=new Promise(resolve=>setTimeout(()=>resolve({error:{message:"Zeitüberschreitung beim Speichern. Bitte Internetverbindung und Supabase-Anmeldung prüfen."}}),10000));
+  const r=await Promise.race([operation,timeout]);
+  if(r.error){
+    $("formMsg").textContent="Fehler: "+r.error.message;
+    return;
+  }
+  $("modal").hidden=true;
+  await load();
+}
 async function del(){if(!editingId||!confirm("Diesen Termin wirklich löschen?"))return;const r=await db.from("personal_calendar_events").delete().eq("id",editingId);if(r.error){$("formMsg").textContent=r.error.message;return}$("modal").hidden=true;await load()}
 $("login").onclick=async()=>{const r=await db.auth.signInWithPassword({email:$("email").value,password:$("password").value});if(r.error){$("loginMsg").textContent=r.error.message;return}init()}
 $("logout").onclick=async()=>{await db.auth.signOut();location.reload()}
-$("add").onclick=openNew;$("cancel").onclick=()=>$("modal").hidden=true;$("save").onclick=save;$("delete").onclick=del;
+$("add").onclick=openNew;
+$("cancel").onclick=(ev)=>{ev.preventDefault();$("modal").hidden=true;};
+$("save").onclick=(ev)=>{ev.preventDefault();save();};
+$("delete").onclick=(ev)=>{ev.preventDefault();del();};
+$("modal").addEventListener("click",ev=>{if(ev.target===$("modal"))$("modal").hidden=true;});
 $("prev").onclick=()=>{if(mode==="month")current.setMonth(current.getMonth()-1);else if(mode==="week")current.setDate(current.getDate()-7);else current.setDate(current.getDate()-1);load()}
 $("next").onclick=()=>{if(mode==="month")current.setMonth(current.getMonth()+1);else if(mode==="week")current.setDate(current.getDate()+7);else current.setDate(current.getDate()+1);load()}
 $("today").onclick=()=>{current=new Date();load()};$("viewMode").onchange=()=>{mode=$("viewMode").value;load()}
-async function init(){const {data}=await db.auth.getSession();if(!data.session){$("loginView").hidden=false;$("calendarView").hidden=true;return}$("loginView").hidden=true;$("calendarView").hidden=false;await load()}
+async function init(){
+  const {data}=await db.auth.getSession();
+  if(!data.session){
+    $("loginView").hidden=false;
+    $("calendarView").hidden=true;
+    $("logout").hidden=true;
+    return;
+  }
+  $("loginView").hidden=true;
+  $("calendarView").hidden=false;
+  $("logout").hidden=false;
+  await load();
+}
+db.auth.onAuthStateChange((_event,session)=>{
+  if(!session){$("loginView").hidden=false;$("calendarView").hidden=true;$("logout").hidden=true;}
+});
+
 init();
