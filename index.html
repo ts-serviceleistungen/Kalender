@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111">
+<title>T.S. Serviceleistungen – Mein Kalender</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span>TS</span><div><b>T.S. SERVICELEISTUNGEN</b><small>MEIN KALENDER</small></div></div>
+  <button id="logout" class="secondary">Abmelden</button>
+</header>
+
+<main>
+  <section id="loginView" class="card">
+    <h1>Mein Kalender</h1>
+    <p>Bitte mit deinem Admin-Zugang anmelden.</p>
+    <input id="email" type="email" placeholder="E-Mail">
+    <input id="password" type="password" placeholder="Passwort">
+    <button id="login">Anmelden</button>
+    <p id="loginMsg" class="msg"></p>
+  </section>
+
+  <section id="calendarView" hidden>
+    <div class="toolbar card">
+      <button id="prev">‹</button>
+      <button id="today">Heute</button>
+      <button id="next">›</button>
+      <strong id="period"></strong>
+      <select id="viewMode">
+        <option value="month">Monat</option>
+        <option value="week">Woche</option>
+        <option value="day">Tag</option>
+      </select>
+      <button id="add">＋ Termin</button>
+    </div>
+
+    <div id="calendar" class="card"></div>
+  </section>
+</main>
+
+<div id="modal" class="modal" hidden>
+  <div class="modalbox">
+    <h2 id="modalTitle">Termin hinzufügen</h2>
+    <label>Titel<input id="title" placeholder="z. B. 24h Dienst"></label>
+    <label>Art
+      <select id="type">
+        <option>24-Stunden-Schicht</option>
+        <option>Privater Termin</option>
+        <option>Sonstiger Termin</option>
+        <option>Garten</option>
+        <option>Fahrzeugpflege</option>
+      </select>
+    </label>
+    <div class="grid2">
+      <label>Beginn<input id="start" type="datetime-local"></label>
+      <label>Ende<input id="end" type="datetime-local"></label>
+    </div>
+    <label>Notiz<textarea id="notes" rows="3"></textarea></label>
+    <label class="check"><input id="block" type="checkbox" checked> Kundenbuchungen für diese Zeit blockieren</label>
+    <p id="formMsg" class="msg"></p>
+    <div class="actions">
+      <button id="save">Speichern</button>
+      <button id="delete" class="danger" hidden>Löschen</button>
+      <button id="cancel" class="secondary">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
