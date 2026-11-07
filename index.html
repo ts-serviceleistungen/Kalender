@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>T.S. Serviceleistungen – Mein Kalender</title>
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <header>
@@ -102,6 +102,7 @@
     <label>Art
       <select id="type">
         <option>24-Stunden-Schicht</option>
+        <option>Urlaub</option>
         <option>Privater Termin</option>
         <option>Sonstiger Termin</option>
         <option>Garten</option>
@@ -125,7 +126,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="app.js?v=13.1"></script>
+<script src="app.js?v=13.2"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js",{scope:"./"}).catch(()=>{}));}</script>
 </body>
 </html>
