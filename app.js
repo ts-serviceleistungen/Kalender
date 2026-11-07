@@ -211,7 +211,7 @@ function renderTimeView(){
           const ee=new Date(e.end_time);
           // Ein Termin wird nur in seiner tatsächlichen Start-Stunde angezeigt.
           // Besonders wichtig für 24-Stunden-Schichten: keine Duplikate in jeder Stunde.
-          return es>=s && es<en && ee>s;
+          return e.event_type==="Urlaub" ? h===0 && es<en && ee>s : es>=s && es<en && ee>s;
         })
         .forEach(e=>html+=eventHtml(e));
       html+='</div>';
