@@ -6,7 +6,7 @@ function pad(n){return String(n).padStart(2,"0")}
 function localInput(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
 function fromInput(v){return new Date(v)}
 function esc(s=""){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function cls(e){if(e.event_type==="Garten")return"garden";if(e.event_type==="Fahrzeugpflege")return"vehicle";if(e.event_type==="24-Stunden-Schicht")return"shift";return"private"}
+function cls(e){if(e.event_type==="Garten")return"garden";if(e.event_type==="Fahrzeugpflege")return"vehicle";if(e.event_type==="24-Stunden-Schicht")return"shift";if(e.event_type==="Urlaub")return"vacation";return"private"}
 function startOfWeek(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x}
 function endOfWeek(d){const x=startOfWeek(d);x.setDate(x.getDate()+7);return x}
 function fmt(d){return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"})}
@@ -20,11 +20,13 @@ function render(){
 }
 function eventHtml(e){
   const s=new Date(e.start_time), en=new Date(e.end_time);
-  const endLabel=e.event_type==="24-Stunden-Schicht"
-    ? `${pad(en.getHours())}:${pad(en.getMinutes())} Folgetag`
-    : `${pad(en.getHours())}:${pad(en.getMinutes())}`;
+  const timeLabel=e.event_type==="Urlaub"
+    ? "Ganztägig"
+    : e.event_type==="24-Stunden-Schicht"
+      ? `${pad(s.getHours())}:${pad(s.getMinutes())}–${pad(en.getHours())}:${pad(en.getMinutes())} Folgetag`
+      : `${pad(s.getHours())}:${pad(s.getMinutes())}–${pad(en.getHours())}:${pad(en.getMinutes())}`;
   return `<div class="event ${cls(e)}" data-id="${e.id}">
-    <b>${esc(e.title)}</b><br>${pad(s.getHours())}:${pad(s.getMinutes())}–${endLabel}
+    <b>${esc(e.title)}</b><br>${timeLabel}
   </div>`;
 }
 
@@ -169,7 +171,12 @@ function renderMonth(){
   for(let d=new Date(a);d<b;d.setDate(d.getDate()+1)){
     const day=new Date(d), key=isoDateLocal(day);
     html+=`<div class="day"><div class="daynum">${day.getDate()}</div>`;
-    events.filter(e=>isoDateLocal(new Date(e.start_time))===key).forEach(e=>html+=eventHtml(e));
+    events.filter(e=>{
+      const es=new Date(e.start_time), ee=new Date(e.end_time);
+      const ds=new Date(day); ds.setHours(0,0,0,0);
+      const de=new Date(ds); de.setDate(de.getDate()+1);
+      return e.event_type==="Urlaub" ? es<de && ee>ds : isoDateLocal(es)===key;
+    }).forEach(e=>html+=eventHtml(e));
     html+="</div>";
   }
   html+="</div>";
@@ -221,6 +228,19 @@ function bindEvents(){
   });
 }
 function openNew(){editingId=null;$("modalTitle").textContent="Termin hinzufügen";$("title").value="";$("type").value="24-Stunden-Schicht";let s=new Date(current);s.setHours(6,0,0,0);let e=new Date(s);e.setDate(e.getDate()+1);e.setHours(6,30,0,0);$("start").value=localInput(s);$("end").value=localInput(e);$("notes").value="";$("block").checked=true;$("delete").hidden=true;$("formMsg").textContent="";$("modal").hidden=false}
+function setVacationTimes(){
+  const value=$("start").value;
+  if(!value)return;
+  const start=fromInput(value);
+  if(isNaN(start))return;
+  start.setHours(0,0,0,0);
+  const end=new Date(start);
+  end.setDate(end.getDate()+1);
+  $("start").value=localInput(start);
+  $("end").value=localInput(end);
+  $("title").value="Urlaub";
+  $("block").checked=true;
+}
 function setShiftTimes(){
   const startValue = $("start").value;
   if(!startValue) return;
@@ -235,9 +255,8 @@ function setShiftTimes(){
 }
 
 $("type").addEventListener("change",()=>{
-  if($("type").value==="24-Stunden-Schicht"){
-    setShiftTimes();
-  }
+  if($("type").value==="24-Stunden-Schicht")setShiftTimes();
+  else if($("type").value==="Urlaub")setVacationTimes();
 });
 
 function openEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editingId=id;$("modalTitle").textContent="Termin bearbeiten";$("title").value=e.title;$("type").value=e.event_type;$("start").value=localInput(new Date(e.start_time));$("end").value=localInput(new Date(e.end_time));$("notes").value=e.notes||"";$("block").checked=e.blocks_customer_bookings;$("delete").hidden=false;$("formMsg").textContent="";$("modal").hidden=false}
@@ -254,12 +273,12 @@ async function save(){
     return;
   }
   const payload={
-    title,
+    title:$("type").value==="Urlaub"?"Urlaub":title,
     event_type:$("type").value,
     start_time:s.toISOString(),
     end_time:e.toISOString(),
     notes:$("notes").value.trim()||null,
-    blocks_customer_bookings:$("block").checked
+    blocks_customer_bookings:$("type").value==="Urlaub" ? true : $("block").checked
   };
   $("formMsg").textContent="Speichere…";
   const operation=editingId
@@ -314,6 +333,7 @@ $("monthPicker").onchange=()=>{
 };
 $("type").onchange=()=>{
   if($("type").value==="24-Stunden-Schicht")setShiftTimes();
+  else if($("type").value==="Urlaub")setVacationTimes();
 };
 
 async function init(){
