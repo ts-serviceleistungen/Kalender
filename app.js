@@ -235,7 +235,7 @@ function setVacationTimes(){
   if(isNaN(start))return;
   start.setHours(0,0,0,0);
   const end=new Date(start);
-  end.setDate(end.getDate()+1);
+  end.setHours(23,59,0,0);
   $("start").value=localInput(start);
   $("end").value=localInput(end);
   $("title").value="Urlaub";
